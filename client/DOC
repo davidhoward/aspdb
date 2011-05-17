@@ -1,0 +1,98 @@
+Usage Notes for ASPDB customers
+
+section 1 (line 8): Setting Up
+section 2 (line 27): Registering Your Specialiser
+section 3 (line 65): Storing and Fetching Data
+
+###
+Section 1: Setting Up
+	ASP Strategy Engines take advantage of the ASPDB framework through the inclusion of the 
+asp_client module, located in this package. The asp_client module relies upon two external
+resources:
+	
+	asp.ini, which is a file containing the urls of trusted ASPDB servers. this should be in the
+same directory as asp_client.py .
+
+	The ASP framework, which it utilises for platform detection and other utilities. Before trying
+to run an application which uses asp_client, make sure that the the root package of the ASP core is
+on your PYTHONPATH.
+
+	With the environment prepared to run the asp_client application, you can now take advantage
+of all the functionality of that module. The public interface of the asp_client application is
+through the class ClientDB; all functions discussed here are methods of that class. For code examples,
+refer to the test package of the project.
+
+
+###
+Section 2: Registering Your Specialiser
+	Before a specialiser can take advantage of the ASPDB framework, it must be registered.
+Registration is accomplished by the ClientDB function register_specialiser, which has the signature
+	
+	register_specialiser(specname, key_structure)
+	
+	specname is a name uniquely identifying your specialiser with the ASPDB service. It must be a string
+no fewer than three and no more than thirty characters in length, and composed only of alphanumeric characters
+or the special characters dot ('.'), dash ('-'), or underscore ('_'). This argument should match the specname
+argument that was used as an initial argument to the ClientDB instance.
+	key_structure is a dictionary representing the types and names of information you want to store regarding
+runs of your specialiser. The keys of the dictionary should be strings which conform to the same restrictions as
+the specname, and the the values may be integers, floats, or strings. The values passed in as part of key_structure
+in the register_specialiser function become the default values for those fields in the database; If a record is
+later submitted that does not specify one of those fields, the default value will be inserted for the missing field.
+
+	An optional but highly recommended next step is to develop and register a similarity
+function for your specialiser. In the process of selecting results to return to a
+query for results from a given specialiser, the database filters all data for that specialiser
+based upon some notion of similarity to a set of  'key' values (which will be discussed later).
+A defualt similarity function exists, but it does not take into account any specialiser-specific
+data, and as such will probably be less useful than one constructed with expert knowledge
+of the significance of the data.
+	The requirements for a similarity function are simple: It must takes as arguments two record
+instances, return a floating point value on the close interval [0.0, 1.0], and never raise any
+uncaught exceptions. Record instances are objects which support dict-like access to fields
+specified in the key structure for the specialiser, and also possess a 'platform' attribute
+which contain platform information (as gathered with asp.config) and which may be compared
+to one another via the platform.simiarity function.
+	Once you've created your similarity function, place it in a python module file and
+submit the file to the administrators of your ASPDB server. When it is determined that your
+function does not pose risks to the service, it may be used by passing it as the
+'similarity' argument to find calls, as specified below.
+	The name of your similarity function, and the module in wich it is contained, are
+subject to the rules for naming specialisers, with the added restriction that neither may
+contain the character dot ('.').
+
+###
+Section 3: Storing and Fetching data
+
+	Data can be fetched from the ASPDB with the find method, which has the following signature:
+	
+	find(key, similarity, tolerance)
+	
+	key is a dictionary mapping field names to attributes of the problem instance in question. This follows the same
+form restrictions as the key structure for specialiser registration. The fields of the key need not match those 
+specified by the specialiser's key structure; Extra fields will be ignored, and missing fields will be replaced
+by the specialiser defaults specified at registration.
+	similarity is the qualified name of a similarity function you wish to use for filtering results. Similarity
+functions are discussed more thoroughly in the above section. Similarity functions should be specified
+with their fully qualified name; That is, if you wish to use compare records with the function
+'least_squares'  in module 'spec-x', you should pass 'spec-x.least_squares' (as a string) as the smiliarity
+argument to your find query.
+	tolerance is a float value on the closed interval [0.0, 1.0]. Only records which are found to
+be similar to the key with to a degree greater than or equal to the tolerance are returned to
+the client.
+
+	The results of a find operation are preserved in two ways. The most programatically
+accessible way is through the 'records' instance variable of the ClientDB object. This
+variable is a collection of read-only record objects which support dict (array-index)
+notation for fetching the values of member variables, as defined by the key structure of
+the specialiser to which they belong.
+	In addition, the xml returned by the server in response to the client's request is
+saved in a file named <specname>.response.xml, which is not read after creation and may be
+manipulated or consumed in whichever method is most convenient for your application.
+	Both of these results are overwritten at each time 'find' is called.
+	
+	
+	Data is stored via the update method, which takes as arugment a dictionary whose
+structure follows the same format as the key structure used for specialiser registration.
+mappings in this dictionary which have a key that is not a registered field of the specialiser
+will be ignored.

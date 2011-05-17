@@ -1,0 +1,13 @@
+application: aspdb-server
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+
+
+- url: /(.*)/record(.*)
+  script: serv.py
+
+- url: /.*
+  script: out.py
