@@ -1,0 +1,11 @@
+Here is Described the directory structure of the aspdb utility. Refer to the DOC files
+in the respective directories for manifests and usage notes.
+
+appengine:
+	contains necessary files for running an aspdb server with google appengine.
+
+client:
+	python package implementing client interface to aspdb.
+	
+development:
+	contains developer notes and under-development features.
